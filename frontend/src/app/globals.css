@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  /* Background Layers */
+  --bg-base: hsl(240, 10%, 3.5%);
+  --bg-raised: hsl(240, 8%, 7%);
+  --bg-overlay: hsl(240, 8%, 10%);
+  --bg-input: hsl(240, 8%, 5%);
+
+  /* Borders */
+  --border-subtle: hsl(240, 10%, 14%);
+  --border-hover: hsl(45, 100%, 60%);
+
+  /* Accent — Warm Amber/Gold */
+  --accent: hsl(45, 100%, 60%);
+  --accent-dim: hsl(45, 80%, 40%);
+  --accent-glow: hsla(45, 100%, 60%, 0.15);
+  --accent-glow-strong: hsla(45, 100%, 60%, 0.25);
+
+  /* Text */
+  --text-primary: hsl(0, 0%, 93%);
+  --text-secondary: hsl(240, 5%, 50%);
+  --text-tertiary: hsl(240, 5%, 35%);
+
+  /* Semantic */
+  --success: #25D366;
+  --danger: #ef4444;
+}
+
+@theme inline {
+  --color-bg-base: var(--bg-base);
+  --color-bg-raised: var(--bg-raised);
+  --color-bg-overlay: var(--bg-overlay);
+  --color-bg-input: var(--bg-input);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-hover: var(--border-hover);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-glow: var(--accent-glow);
+  --color-accent-glow-strong: var(--accent-glow-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Geist Mono', monospace;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar for the filter chip row */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Toast animation */
+@keyframes toast-slide-in {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes toast-slide-out {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-100%); opacity: 0; }
+}
+.toast-enter { animation: toast-slide-in 0.3s ease-out forwards; }
+.toast-exit { animation: toast-slide-out 0.3s ease-in forwards; }
+
+/* Stagger animation for cards */
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.card-stagger {
+  animation: card-enter 0.4s ease-out backwards;
+}
+
+/* Bottom sheet slide-up for mobile modal */
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.sheet-enter {
+  animation: sheet-up 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* Center dialog scale-in for desktop modal */
+@keyframes dialog-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.dialog-enter {
+  animation: dialog-in 0.2s ease-out forwards;
+}
+
+/* Overlay fade */
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.overlay-enter {
+  animation: overlay-in 0.2s ease-out forwards;
+}
