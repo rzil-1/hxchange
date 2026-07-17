@@ -56,7 +56,7 @@ function SwapBoardContent() {
   const fetchListings = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await fetch("http://localhost:8000/api/listings");
+      const res = await fetch("http://127.0.0.1:8000/api/listings");
       const json = await res.json();
       if (json.status === "success") setListings(json.data);
     } catch (err) {
@@ -93,7 +93,7 @@ function SwapBoardContent() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/listings/${listingId}/resolve`, {
+      const res = await fetch(`http://127.0.0.1:8000/api/listings/${listingId}/resolve`, {
         method: "PATCH",
         headers: { "Authorization": `Bearer ${session.access_token}` }
       });
@@ -131,7 +131,7 @@ function SwapBoardContent() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/listings", {
+      const response = await fetch("http://127.0.0.1:8000/api/listings", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
         body: JSON.stringify({
