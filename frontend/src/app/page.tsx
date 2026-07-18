@@ -5,6 +5,8 @@ import { ArrowRight, MessageCircle, MapPin, LogOut, User, X, Plus, Check } from 
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
 // ─── Domain Config ───────────────────────────────────────────────
 const HOSTELS = [
   { name: 'Kailash (MT3)', wings: ['A', 'B', 'C', 'D'] },
@@ -64,7 +66,7 @@ function SwapBoardContent() {
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
-      const res = await fetch("http://127.0.0.1:8000/api/listings", { headers });
+      const res = await fetch(`${API_URL}/api/listings`, { headers });
       const json = await res.json();
       if (json.status === "success") setListings(json.data);
     } catch (err) {
@@ -104,7 +106,7 @@ function SwapBoardContent() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return setToast({ message: 'Please login first', type: 'error' });
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/listings/${listingId}/resolve`, {
+      const res = await fetch(`${API_URL}/api/listings/${listingId}/resolve`, {
         method: "PATCH",
         headers: { "Authorization": `Bearer ${session.access_token}` }
       });
@@ -143,7 +145,7 @@ function SwapBoardContent() {
     const hasWings = hostel && hostel.wings.length > 0;
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/listings", {
+      const response = await fetch(`${API_URL}/api/listings`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json", 
