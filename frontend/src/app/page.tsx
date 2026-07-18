@@ -42,6 +42,7 @@ function SwapBoardContent() {
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,7 +57,14 @@ function SwapBoardContent() {
   const fetchListings = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await fetch("http://127.0.0.1:8000/api/listings");
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch("http://127.0.0.1:8000/api/listings", { headers });
       const json = await res.json();
       if (json.status === "success") setListings(json.data);
     } catch (err) {
@@ -64,7 +72,7 @@ function SwapBoardContent() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     fetchListings();
@@ -75,7 +83,10 @@ function SwapBoardContent() {
       window.history.replaceState(null, '', '/');
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setIsAuthLoading(false);
+    });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
     return () => subscription.unsubscribe();
   }, [searchParams, supabase, fetchListings]);
@@ -91,7 +102,7 @@ function SwapBoardContent() {
 
   const handleResolve = async (listingId: string) => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) return setToast({ message: 'Please login first', type: 'error' });
     try {
       const res = await fetch(`http://127.0.0.1:8000/api/listings/${listingId}/resolve`, {
         method: "PATCH",
@@ -123,17 +134,21 @@ function SwapBoardContent() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return setToast({ message: 'Please login first', type: 'error' });
+    
+    setIsSubmitting(true);
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return setToast({ message: "You must be logged in!", type: 'error' });
 
     const hostel = HOSTELS.find(h => h.name === formData.tower);
     const hasWings = hostel && hostel.wings.length > 0;
-    setIsSubmitting(true);
 
     try {
       const response = await fetch("http://127.0.0.1:8000/api/listings", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+        headers: { 
+          "Content-Type": "application/json", 
+          "Authorization": `Bearer ${session?.access_token}` 
+        },
         body: JSON.stringify({
           have_tower: formData.tower, have_floor: parseInt(formData.floor),
           have_wing: hasWings ? formData.wing : null, have_room: formData.room,
@@ -266,7 +281,36 @@ function SwapBoardContent() {
         </div>
 
         {/* ─── Listings ─── */}
-        {isLoading ? (
+        {isAuthLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-bg-raised rounded-2xl border border-border-subtle p-5 animate-pulse">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-bg-overlay" />
+                  <div className="h-3 w-24 bg-bg-overlay rounded" />
+                </div>
+                <div className="h-8 w-20 bg-bg-overlay rounded mb-2" />
+                <div className="h-3 w-40 bg-bg-overlay rounded" />
+              </div>
+            ))}
+          </div>
+        ) : !user ? (
+          <div className="text-center py-24 bg-bg-raised/50 rounded-2xl border border-border-subtle backdrop-blur-sm">
+            <div className="w-16 h-16 bg-bg-overlay rounded-full flex items-center justify-center mx-auto mb-4 border border-border-subtle">
+              <span className="text-2xl">🔒</span>
+            </div>
+            <h3 className="text-lg font-bold text-text-primary mb-2">Members Only</h3>
+            <p className="text-text-secondary text-sm max-w-sm mx-auto mb-6">
+              To protect student privacy and prevent spam, you must log in with your @nitk.edu.in email to view listings and contact partners.
+            </p>
+            <button
+              onClick={handleLogin}
+              className="inline-flex items-center gap-2 bg-accent text-bg-base font-bold text-sm px-6 py-3 rounded-full hover:brightness-110 active:scale-95 transition-all shadow-[0_4px_20px_var(--accent-glow)]"
+            >
+              <User size={16} /> Login to Access Board
+            </button>
+          </div>
+        ) : isLoading ? (
           /* Skeleton loading state */
           <div className="space-y-4">
             {[1, 2, 3].map(i => (

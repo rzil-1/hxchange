@@ -4,7 +4,8 @@ import logging
 from typing import Optional
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi import FastAPI, HTTPException, Header, Request, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 from supabase import create_client, Client
@@ -27,6 +28,17 @@ logger = logging.getLogger("hxchange")
 
 # ─── FIX C1: Singleton Supabase client (shared across requests) ──
 supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+security = HTTPBearer()
+
+def verify_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        user_response = supabase_client.auth.get_user(credentials.credentials)
+        if not user_response or not user_response.user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return user_response.user, credentials.credentials
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
 
 # ─── FIX C2: Rate limiter ────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address)
@@ -110,22 +122,6 @@ class ListingCreate(BaseModel):
         return v.strip()
 
 
-# ─── Helper: verify JWT and get user ──────────────────────────────
-def get_verified_user(authorization: Optional[str]):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization Header")
-    token = authorization.replace("Bearer ", "")
-    try:
-        user_resp = supabase_client.auth.get_user(token)
-        if not user_resp or not user_resp.user:
-            raise HTTPException(status_code=401, detail="Invalid session")
-        return user_resp.user, token
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired session")
-
-
 # ─── Routes ───────────────────────────────────────────────────────
 
 @app.get("/")
@@ -134,8 +130,8 @@ def health_check():
 
 
 @app.get("/api/listings")
-@limiter.limit("30/minute")
-def get_listings(request: Request):
+@limiter.limit("20/minute")
+async def get_listings(request: Request, user = Depends(verify_user)):
     """FIX M1+M2+H4: Cached, filtered, paginated listings."""
     
     # Check cache first
@@ -162,11 +158,11 @@ def get_listings(request: Request):
 
 
 @app.post("/api/listings")
-@limiter.limit("3/minute")
-def create_listing(listing: ListingCreate, request: Request, authorization: str = Header(None)):
+@limiter.limit("5/minute")
+async def create_listing(request: Request, listing: ListingCreate, auth = Depends(verify_user)):
     """FIX C2: Rate limited. FIX H2: Safe error handling. FIX H3: Validated input."""
     
-    user, token = get_verified_user(authorization)
+    user, token = auth
     user_id = user.id
 
     # Cross-validate wing against hostel
@@ -179,7 +175,6 @@ def create_listing(listing: ListingCreate, request: Request, authorization: str 
     try:
         # Authenticate for RLS
         supabase_client.postgrest.auth(token)
-
         # FIX C3: The UNIQUE partial index on the DB will reject duplicates,
         # but we also check here for a friendly error message.
         existing = (
@@ -223,11 +218,11 @@ def create_listing(listing: ListingCreate, request: Request, authorization: str 
 
 
 @app.patch("/api/listings/{listing_id}/resolve")
-@limiter.limit("5/minute")
-def resolve_listing(listing_id: str, request: Request, authorization: str = Header(None)):
+@limiter.limit("10/minute")
+async def resolve_listing(request: Request, listing_id: str, auth = Depends(verify_user)):
     """FIX C4: Allow users to mark their own listing as resolved/swapped."""
     
-    user, token = get_verified_user(authorization)
+    user, token = auth
     user_id = user.id
 
     try:
